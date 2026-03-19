@@ -6,11 +6,11 @@ This file is for communication, distribution, and launch messaging.
 
 Short version:
 
-`codex-stitch-local` turns Stitch SDK into a reusable skill for coding agents.
+`StitchFlow` turns Stitch SDK into a reusable skill for coding agents.
 
 Expanded version:
 
-`codex-stitch-local` lets you generate and iterate UI with natural language, save HTML and screenshots locally, and reuse the same workflow across Codex, Claude Code, and OpenClaw.
+`StitchFlow` lets you generate and iterate UI with natural language, save HTML and screenshots locally, and reuse the same workflow across Codex, Claude Code, and OpenClaw.
 
 ## Why people should care
 
@@ -39,7 +39,7 @@ You can:
 - save local HTML and screenshots
 - use one install flow across multiple agent clients
 
-Repo: https://github.com/yshishenya/codex-stitch-local
+Repo: https://github.com/yshishenya/stitchflow
 ```
 
 ## Social post draft: Russian
@@ -55,7 +55,7 @@ Repo: https://github.com/yshishenya/codex-stitch-local
 - сохранять HTML и скриншоты локально
 - работать через один install flow в нескольких agent-клиентах
 
-Репозиторий: https://github.com/yshishenya/codex-stitch-local
+Репозиторий: https://github.com/yshishenya/stitchflow
 ```
 
 ## Viral checklist

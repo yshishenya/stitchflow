@@ -1,10 +1,10 @@
-# codex-stitch-local
+# StitchFlow
 
 Cross-agent Stitch skill bundle for Codex, Claude Code, and OpenClaw.
 
 Repository:
 
-- https://github.com/yshishenya/codex-stitch-local
+- https://github.com/yshishenya/stitchflow
 
 ## What this skill is for
 
@@ -20,8 +20,8 @@ Use `stitch-design-local` when the task is:
 ## Install
 
 ```bash
-git clone https://github.com/yshishenya/codex-stitch-local.git
-cd codex-stitch-local
+git clone https://github.com/yshishenya/stitchflow.git
+cd stitchflow
 bash install.sh --target all
 ```
 
@@ -41,6 +41,7 @@ Native compatibility links:
 - explicit invocation: `Use $stitch-design-local ...`
 - common jobs: generate a new screen, edit an existing screen, create variants, export local artifacts
 - toolkit root: `${STITCH_STARTER_ROOT:-$HOME/.agents/stitch-starter}`
+- brand: `StitchFlow`
 
 ## Skill
 

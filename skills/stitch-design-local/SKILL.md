@@ -1,7 +1,7 @@
 ---
 name: stitch-design-local
 description: Turn briefs, mockups, and product context into Stitch UI screens, design variants, Tailwind-friendly HTML, and screenshots. Use when the user wants to explore a new screen, edit an existing screen, compare visual directions, or save local design artifacts from natural-language input.
-homepage: "https://github.com/yshishenya/codex-stitch-local"
+homepage: "https://github.com/yshishenya/stitchflow"
 category: "design"
 platforms: "codex, claude-code, openclaw"
 install: "bash install.sh --target all"
@@ -14,6 +14,7 @@ compatibility: "Requires Node.js 22+, a configured STITCH_API_KEY, and the local
 Use this skill when the user wants to create a new screen, refine an existing one, generate design variants, or export local HTML and screenshots through Stitch.
 
 It uses the local toolkit at `${STITCH_STARTER_ROOT:-$HOME/.agents/stitch-starter}` instead of a Stitch MCP tool.
+It is distributed as part of the `StitchFlow` project, while keeping the `stitch-design-local` skill slug for compatibility.
 
 ## Local setup
 

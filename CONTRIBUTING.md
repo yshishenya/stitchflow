@@ -38,8 +38,8 @@ Do not introduce machine-specific assumptions such as:
 ### Local Setup For Development
 
 ```bash
-git clone https://github.com/yshishenya/codex-stitch-local.git
-cd codex-stitch-local
+git clone https://github.com/yshishenya/stitchflow.git
+cd stitchflow
 bash install.sh
 ```
 
@@ -93,10 +93,10 @@ cd stitch-starter && npm ci
 Installer test in a temporary Codex home:
 
 ```bash
-TEST_AGENTS_HOME=/tmp/codex-stitch-local-test-agents
-TEST_CODEX_HOME=/tmp/codex-stitch-local-test-codex
-TEST_CLAUDE_HOME=/tmp/codex-stitch-local-test-claude
-TEST_OPENCLAW_HOME=/tmp/codex-stitch-local-test-openclaw
+TEST_AGENTS_HOME=/tmp/stitchflow-test-agents
+TEST_CODEX_HOME=/tmp/stitchflow-test-codex
+TEST_CLAUDE_HOME=/tmp/stitchflow-test-claude
+TEST_OPENCLAW_HOME=/tmp/stitchflow-test-openclaw
 rm -rf "$TEST_AGENTS_HOME" "$TEST_CODEX_HOME" "$TEST_CLAUDE_HOME" "$TEST_OPENCLAW_HOME"
 AGENT_SKILLS_HOME="$TEST_AGENTS_HOME" \
 CODEX_HOME="$TEST_CODEX_HOME" \
@@ -190,8 +190,8 @@ If a change affects the public installation flow, skill trigger behavior, or sec
 ### Локальная Настройка Для Разработки
 
 ```bash
-git clone https://github.com/yshishenya/codex-stitch-local.git
-cd codex-stitch-local
+git clone https://github.com/yshishenya/stitchflow.git
+cd stitchflow
 bash install.sh
 ```
 
@@ -245,10 +245,10 @@ cd stitch-starter && npm ci
 Проверка installer-а во временный Codex home:
 
 ```bash
-TEST_AGENTS_HOME=/tmp/codex-stitch-local-test-agents
-TEST_CODEX_HOME=/tmp/codex-stitch-local-test-codex
-TEST_CLAUDE_HOME=/tmp/codex-stitch-local-test-claude
-TEST_OPENCLAW_HOME=/tmp/codex-stitch-local-test-openclaw
+TEST_AGENTS_HOME=/tmp/stitchflow-test-agents
+TEST_CODEX_HOME=/tmp/stitchflow-test-codex
+TEST_CLAUDE_HOME=/tmp/stitchflow-test-claude
+TEST_OPENCLAW_HOME=/tmp/stitchflow-test-openclaw
 rm -rf "$TEST_AGENTS_HOME" "$TEST_CODEX_HOME" "$TEST_CLAUDE_HOME" "$TEST_OPENCLAW_HOME"
 AGENT_SKILLS_HOME="$TEST_AGENTS_HOME" \
 CODEX_HOME="$TEST_CODEX_HOME" \

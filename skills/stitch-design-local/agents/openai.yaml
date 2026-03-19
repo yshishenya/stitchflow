@@ -1,5 +1,5 @@
 interface:
-  display_name: "Stitch Design Local"
+  display_name: "StitchFlow"
   short_description: "Turn product briefs into Stitch screens, variants, Tailwind HTML, and screenshots"
   brand_color: "#1C6BFF"
   default_prompt: "Use $stitch-design-local to turn my brief and product context into a Stitch screen, edit or explore variants, and save Tailwind-ready HTML and screenshots locally."
