@@ -24,7 +24,9 @@ Snapshot as of 2026-03-19:
 - `awesome-claude-skills`: PR opened at `https://github.com/ComposioHQ/awesome-claude-skills/pull/429`
 - `netresearch/claude-code-marketplace`: PR opened at `https://github.com/netresearch/claude-code-marketplace/pull/34`
 - `heilcheng/awesome-agent-skills`: PR opened at `https://github.com/heilcheng/awesome-agent-skills/pull/117`
+- `rohitg00/awesome-claude-code-toolkit`: PR opened at `https://github.com/rohitg00/awesome-claude-code-toolkit/pull/67`
 - `github/awesome-copilot`: not submitted because their contribution policy rejects non-GitHub and non-Microsoft external plugins from remote sources
+- `hesreallyhim/awesome-claude-code`: recommends submissions only via the GitHub web UI issue form; CLI/programmatic submission is explicitly disallowed
 - `Skillstore`: submit page exists, but automated submission endpoint was not exposed in the public page bundle; treat as a manual follow-up unless we sign in and use the web UI
 
 ## Popular surfaces by ecosystem
