@@ -1,7 +1,7 @@
 {
   "name": "stitch-design-local",
   "description": "Turn natural-language product briefs into UI screens, variants, HTML, and screenshots with Stitch across Codex, Claude Code, and OpenClaw.",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "author": {
     "name": "yshishenya",
     "url": "https://github.com/yshishenya"

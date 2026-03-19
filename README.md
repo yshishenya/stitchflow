@@ -17,6 +17,8 @@ What it gives you:
 - local HTML, screenshots, and run artifacts
 - one install flow for multiple agent clients
 
+![Generated Stitch dashboard demo](./assets/demo/stitch-dashboard-demo.png)
+
 Работает как portable skill bundle для:
 
 - Codex
