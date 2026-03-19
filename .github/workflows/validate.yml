@@ -1,0 +1,56 @@
+name: Validate
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  validate-install:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: stitch-starter/package-lock.json
+
+      - name: Install toolkit dependencies
+        working-directory: stitch-starter
+        run: npm ci
+
+      - name: Validate installer layout
+        env:
+          AGENT_SKILLS_HOME: /tmp/stitchflow-test-agents
+          STITCH_STARTER_ROOT: /tmp/stitchflow-test-agents/stitch-starter
+          CODEX_HOME: /tmp/stitchflow-test-codex
+          CLAUDE_HOME: /tmp/stitchflow-test-claude
+          OPENCLAW_HOME: /tmp/stitchflow-test-openclaw
+          COPILOT_HOME: /tmp/stitchflow-test-copilot
+        run: |
+          rm -rf \
+            "$AGENT_SKILLS_HOME" \
+            "$CODEX_HOME" \
+            "$CLAUDE_HOME" \
+            "$OPENCLAW_HOME" \
+            "$COPILOT_HOME"
+
+          bash install.sh --target all --skip-smoke
+
+          test -d "$AGENT_SKILLS_HOME/skills/stitchflow"
+          test -d "$AGENT_SKILLS_HOME/skills/stitch-design-local"
+          test -L "$CODEX_HOME/skills/stitchflow"
+          test -L "$CODEX_HOME/skills/stitch-design-local"
+          test -L "$CLAUDE_HOME/skills/stitchflow"
+          test -L "$CLAUDE_HOME/skills/stitch-design-local"
+          test -L "$OPENCLAW_HOME/skills/stitchflow"
+          test -L "$OPENCLAW_HOME/skills/stitch-design-local"
+          test -L "$COPILOT_HOME/skills/stitchflow"
+          test -L "$COPILOT_HOME/skills/stitch-design-local"
+          test -f "$STITCH_STARTER_ROOT/package.json"
