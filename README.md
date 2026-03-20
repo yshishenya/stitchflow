@@ -28,6 +28,10 @@ Why people star and keep it:
 - save local HTML and screenshots your team can review immediately
 - reuse one workflow across multiple coding-agent clients
 
+![StitchFlow real workflow demo](./assets/demo/stitchflow-real-demo.gif)
+
+Main product demo: install → generate → preview → runs/ artifacts.
+
 ![StitchFlow live workflow demo](./assets/demo/stitchflow-liveflow.gif)
 
 Live-style workflow demo: prompt → generate → review artifacts.
