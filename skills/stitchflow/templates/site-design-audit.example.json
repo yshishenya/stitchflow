@@ -1,0 +1,40 @@
+{
+  "projectId": "123456789",
+  "minHomeVariants": 5,
+  "logo": {
+    "selectedName": "Example Brand",
+    "selectedVariant": "mark-03",
+    "path": "./logo/mark-03.png"
+  },
+  "selectedHomeScreenId": "home-screen-id",
+  "downloadManifest": "./download-project/download-project.json",
+  "exportScreensManifest": "./approved-screen-export/export-screens.json",
+  "homeVariants": [
+    {
+      "name": "Homepage A",
+      "screenId": "home-screen-id",
+      "codePath": "./download-project/home/code.html",
+      "screenshotPath": "./download-project/home/screen.png"
+    }
+  ],
+  "expectedScreens": [
+    {
+      "key": "home",
+      "title": "Homepage",
+      "required": true,
+      "screenId": "home-screen-id",
+      "codePath": "./download-project/home/code.html",
+      "screenshotPath": "./download-project/home/screen.png",
+      "requiredText": ["Example Brand"]
+    },
+    {
+      "key": "pricing",
+      "title": "Pricing",
+      "required": true,
+      "screenId": "pricing-screen-id",
+      "codePath": "./download-project/pricing/code.html",
+      "screenshotPath": "./download-project/pricing/screen.png",
+      "requiredText": ["Pricing"]
+    }
+  ]
+}

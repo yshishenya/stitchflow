@@ -1,8 +1,8 @@
 interface:
   display_name: "StitchFlow"
-  short_description: "Turn product briefs into Stitch screens, variants, Tailwind HTML, and screenshots"
+  short_description: "Turn product briefs into Stitch screens, full site design workflows, prototypes, Tailwind HTML, and screenshots"
   brand_color: "#1C6BFF"
-  default_prompt: "Use $stitchflow to turn my brief and product context into a Stitch screen, edit or explore variants, and save Tailwind-ready HTML and screenshots locally."
+  default_prompt: "Use $stitchflow to turn my brief and product context into a Stitch project with logo/homepage exploration, selected direction, full screen inventory, design QA, prototype/code handoff, and local HTML/screenshot evidence."
 
 policy:
   allow_implicit_invocation: true

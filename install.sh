@@ -50,6 +50,7 @@ SKIP_NPM=0
 SKIP_SMOKE=0
 TARGET="all"
 ENV_BACKUP=""
+RUNS_BACKUP=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -171,6 +172,10 @@ if [[ -e "$CANONICAL_SKILL_DEST" || -e "$LEGACY_ALIAS_SKILL_DEST" || -e "$TOOLKI
     ENV_BACKUP="$(mktemp)"
     cp "$TOOLKIT_DEST/.env" "$ENV_BACKUP"
   fi
+  if [[ -d "$TOOLKIT_DEST/runs" ]]; then
+    RUNS_BACKUP="$(mktemp -d)"
+    cp -R "$TOOLKIT_DEST/runs" "$RUNS_BACKUP/runs"
+  fi
   safe_remove "$CANONICAL_SKILL_DEST"
   safe_remove "$LEGACY_ALIAS_SKILL_DEST"
   safe_remove "$TOOLKIT_DEST"
@@ -196,6 +201,12 @@ if [[ -n "$ENV_BACKUP" ]]; then
   rm -f "$ENV_BACKUP"
 elif [[ ! -f "$TOOLKIT_DEST/.env" ]]; then
   cp "$TOOLKIT_DEST/.env.example" "$TOOLKIT_DEST/.env"
+fi
+
+if [[ -n "$RUNS_BACKUP" ]]; then
+  rm -rf "$TOOLKIT_DEST/runs"
+  cp -R "$RUNS_BACKUP/runs" "$TOOLKIT_DEST/runs"
+  rm -rf "$RUNS_BACKUP"
 fi
 
 for link_dest in "${LINK_DESTS[@]}"; do
