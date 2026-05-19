@@ -1,7 +1,7 @@
 ---
 name: stitch-design-local
 slug: stitch-design-local
-version: 1.3.1
+version: 1.4.0
 description: Legacy compatibility alias for StitchFlow. Use when a user explicitly references stitch-design-local, or when older prompts and setups still call that skill name.
 homepage: "https://github.com/yshishenya/stitchflow"
 category: "design"

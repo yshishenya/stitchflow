@@ -31,6 +31,30 @@ copy_dir() {
   cp -R "$src" "$dest"
 }
 
+copy_file_if_exists() {
+  local src="$1"
+  local dest="$2"
+  if [[ -f "$src" ]]; then
+    mkdir -p "$(dirname "$dest")"
+    cp "$src" "$dest"
+  fi
+}
+
+copy_toolkit() {
+  local src="$1"
+  local dest="$2"
+  mkdir -p "$dest"
+
+  copy_file_if_exists "$src/.env.example" "$dest/.env.example"
+  copy_file_if_exists "$src/.gitignore" "$dest/.gitignore"
+  copy_file_if_exists "$src/README.md" "$dest/README.md"
+  copy_file_if_exists "$src/package.json" "$dest/package.json"
+  copy_file_if_exists "$src/package-lock.json" "$dest/package-lock.json"
+
+  mkdir -p "$dest/scripts"
+  cp -R "$src/scripts/." "$dest/scripts/"
+}
+
 safe_remove() {
   local path="$1"
   if [[ -L "$path" || -e "$path" ]]; then
@@ -50,6 +74,7 @@ SKIP_NPM=0
 SKIP_SMOKE=0
 TARGET="all"
 ENV_BACKUP=""
+RUNS_BACKUP=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -171,6 +196,10 @@ if [[ -e "$CANONICAL_SKILL_DEST" || -e "$LEGACY_ALIAS_SKILL_DEST" || -e "$TOOLKI
     ENV_BACKUP="$(mktemp)"
     cp "$TOOLKIT_DEST/.env" "$ENV_BACKUP"
   fi
+  if [[ -d "$TOOLKIT_DEST/runs" ]]; then
+    RUNS_BACKUP="$(mktemp -d)"
+    cp -R "$TOOLKIT_DEST/runs" "$RUNS_BACKUP/runs"
+  fi
   safe_remove "$CANONICAL_SKILL_DEST"
   safe_remove "$LEGACY_ALIAS_SKILL_DEST"
   safe_remove "$TOOLKIT_DEST"
@@ -189,13 +218,19 @@ done
 
 copy_dir "$CANONICAL_SKILL_SRC" "$CANONICAL_SKILL_DEST"
 copy_dir "$LEGACY_ALIAS_SKILL_SRC" "$LEGACY_ALIAS_SKILL_DEST"
-copy_dir "$TOOLKIT_SRC" "$TOOLKIT_DEST"
+copy_toolkit "$TOOLKIT_SRC" "$TOOLKIT_DEST"
 
 if [[ -n "$ENV_BACKUP" ]]; then
   cp "$ENV_BACKUP" "$TOOLKIT_DEST/.env"
   rm -f "$ENV_BACKUP"
 elif [[ ! -f "$TOOLKIT_DEST/.env" ]]; then
   cp "$TOOLKIT_DEST/.env.example" "$TOOLKIT_DEST/.env"
+fi
+
+if [[ -n "$RUNS_BACKUP" ]]; then
+  rm -rf "$TOOLKIT_DEST/runs"
+  cp -R "$RUNS_BACKUP/runs" "$TOOLKIT_DEST/runs"
+  rm -rf "$RUNS_BACKUP"
 fi
 
 for link_dest in "${LINK_DESTS[@]}"; do
