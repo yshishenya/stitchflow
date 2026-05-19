@@ -33,6 +33,12 @@ For complex image-led prompts, increase the MCP timeout:
 npm run generate -- --prompt "A cinematic product homepage" --timeout-ms 900000
 ```
 
+Use a specific Stitch model when needed:
+
+```bash
+npm run generate -- --prompt "A cinematic product homepage" --model-id GEMINI_3_1_PRO
+```
+
 Generate into an existing project:
 
 ```bash
@@ -68,6 +74,16 @@ Upload `DESIGN.md` and create a Stitch design system:
 npm run design-md -- --project-id 123456789 --file ./DESIGN.md --device DESKTOP
 ```
 
+List, create, update or apply project design systems through the live Stitch MCP tools:
+
+```bash
+npm run design-system -- --action list --project-id 123456789
+npm run design-system -- --action create --project-id 123456789 --file ./design-system.json
+npm run design-system -- --action update --project-id 123456789 --asset-id 15996705518239280238 --file ./design-system.json
+npm run design-system -- --action apply --project-id 123456789 --asset-id 15996705518239280238 --screen-ids abc,def
+npm run design-system -- --action apply --project-id 123456789 --asset-id 15996705518239280238 --screen-ids abc,def --allow-screen-id-fallback
+```
+
 Export one screen:
 
 ```bash
@@ -92,16 +108,33 @@ Download project code with referenced styles/images rewritten to local assets:
 npm run download-project -- --project-id 123456789
 ```
 
+`download-project` uses the SDK downloader first and automatically falls back
+to a safe local downloader with short screen directories if the SDK hits a
+filesystem path-length issue. Use `--safe-download` to force that fallback.
+
 Audit a completed website design handoff:
 
 ```bash
 npm run site-design-audit -- --file ./site-design-audit.json
 ```
 
+If the audit config enables `renderedViewports`, install the Chromium browser
+once before running rendered overflow/a11y checks:
+
+```bash
+npx playwright install chromium
+```
+
 Run the full StitchFlow regression against the live Stitch API:
 
 ```bash
 npm run regression:e2e -- --timeout-ms 900000
+```
+
+Run the full website design delivery E2E:
+
+```bash
+npm run site-design:e2e -- --brand "Turnirka" --timeout-ms 900000
 ```
 
 ## Codex MCP setup
@@ -138,12 +171,28 @@ For a final multi-screen flow, keep the hosted Stitch project/prototype as the d
 
 For release checks, run `npm run regression:e2e -- --timeout-ms 900000`. It
 creates a scratch Stitch project, exercises tools, generate, DESIGN.md,
-edit, variants, export-screen, export-screens, export-project,
-download-project, and list, then writes a `regression-e2e.json` report under
-`runs/`.
+design-system create/list/update/apply, edit, variants, export-screen,
+export-screens, export-project, download-project, and list, then writes a
+`regression-e2e.json` report under `runs/`. The regression reads each child
+command's own output directory instead of `runs/latest-screen.json`, validates
+HTML/image artifacts, and enforces a per-step timeout. Add
+`--require-download-approved-screens` when a release must fail unless
+`download-project` itself contains every approved screen.
 
 For full website design delivery, use `site-design-audit` after choosing the
 logo and homepage direction. The audit checks the selected homepage, all
-expected screens, local artifacts, required text, screen id accessibility,
-the `download-project` manifest, and the `export-screens` fallback when
-project-wide downloads omit approved screens.
+expected screens, local artifact quality, required text, unsupported claims,
+static accessibility/responsive rules, screen id accessibility, the
+`download-project` manifest, and the explicit `export-screens` fallback when
+project-wide downloads omit approved screens. Audit configs should record
+`handoffStatus`, `qaNotes`, `forbiddenText`, and optional `renderedViewports`.
+
+Use `npm run site-design:e2e -- --brand "Turnirka" --timeout-ms 900000` when
+you need to test the whole design-delivery process end to end: logo board,
+5 homepage candidates, selected homepage, remaining screens, exports, rendered
+viewport/a11y audit, and handoff status checks. Pass `--rendered-audit false`
+to skip browser checks in constrained environments. Use
+`--operation-timeout-ms 900000` to cap each direct Stitch operation and
+`--step-timeout-ms 1020000` to cap child audit processes. The script also runs
+through a parent/worker wrapper; `--total-timeout-ms 3600000` caps the whole
+workflow and can kill a stuck worker process.

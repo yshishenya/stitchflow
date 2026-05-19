@@ -2,7 +2,7 @@
   "name": "stitchflow",
   "displayName": "StitchFlow",
   "description": "Turn product briefs into Stitch UI screens, variants, Tailwind-ready HTML, and screenshots from GitHub Copilot.",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "skills": [
     "skills/"
   ],

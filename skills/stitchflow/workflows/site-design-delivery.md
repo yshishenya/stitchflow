@@ -131,9 +131,15 @@ cd "${STITCH_STARTER_ROOT:-$HOME/.agents/stitch-starter}"
 npm run download-project -- --project-id 123
 ```
 
+The CLI first uses the SDK downloader. If it fails because the hosted screen
+title produced an overlong local directory name, the CLI falls back to a safe
+local downloader with short screen directories and records `downloadMode` plus a
+warning in `download-project.json`.
+
 Then inspect `download-project.json`:
 
 - warnings
+- `downloadMode`
 - unexpected scratch/design-system screens
 - missing selected screen ids
 - which folder maps to each approved screen
@@ -149,6 +155,10 @@ export the approved inventory explicitly:
 cd "${STITCH_STARTER_ROOT:-$HOME/.agents/stitch-starter}"
 npm run export-screens -- --project-id 123 --screen-ids abc123,def456,ghi789
 ```
+
+If you use this fallback in handoff, make it explicit in the audit config with
+`"allowExportFallbackForApprovedScreens": true`. Otherwise, the audit should
+fail when an approved screen is absent from `download-project`.
 
 ## Phase 7: Product QA
 
@@ -174,7 +184,36 @@ npm run site-design-audit -- --file ./site-design-audit.json
 Start from [site-design-audit.example](../templates/site-design-audit.example.json)
 if no audit file exists yet.
 
+The audit config must include:
+
+- `handoffStatus`: `draft`, `final`, or `blocked`
+- `qaNotes`: per-area notes with `passed`, `warning`, or `blocked`
+- `forbiddenText`: unsupported product claims that must not appear
+- `requiredText`: meaningful phrases per screen, not just one generic word
+- optional `renderedViewports` for browser checks of overflow, clipped text,
+  page errors, and serious axe accessibility violations
+
+When `renderedViewports` is enabled, install Chromium once:
+
+```bash
+cd "${STITCH_STARTER_ROOT:-$HOME/.agents/stitch-starter}"
+npx playwright install chromium
+```
+
 Use the generated report to close gaps, then rerun the audit.
+
+For a full live regression of this workflow, run:
+
+```bash
+cd "${STITCH_STARTER_ROOT:-$HOME/.agents/stitch-starter}"
+npm run site-design:e2e -- --brand "Turnirka" --timeout-ms 900000
+```
+
+The full E2E enables rendered audit by default. Use `--rendered-audit false`
+only when the environment cannot run a browser and record that as a QA warning.
+Use `--operation-timeout-ms` to cap each direct Stitch generation/edit call and
+keep CI from waiting indefinitely on a stalled live operation. Use
+`--total-timeout-ms` as the outer parent-process cap for the whole workflow.
 
 ## Handoff Checklist
 
@@ -188,4 +227,6 @@ Use the generated report to close gaps, then rerun the audit.
 - Scratch/support screens are separated from approved screens.
 - Every required screen is marked final, draft, or blocked.
 - Product QA notes are attached to each screen or route.
+- Required phrases, forbidden claims, artifact quality, responsive overflow,
+  and accessibility checks are captured in the audit report.
 - Known implementation adaptations are explicit.

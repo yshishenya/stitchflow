@@ -1,5 +1,41 @@
 {
   "projectId": "123456789",
+  "handoffStatus": "final",
+  "allowExportFallbackForApprovedScreens": true,
+  "qaNotes": [
+    {
+      "area": "coverage",
+      "status": "passed",
+      "note": "Approved screens match the required inventory."
+    },
+    {
+      "area": "responsive-accessibility",
+      "status": "passed",
+      "note": "Static and rendered checks passed for the configured viewports."
+    }
+  ],
+  "forbiddenText": [
+    "free forever",
+    "guaranteed revenue",
+    "official federation certified"
+  ],
+  "renderedViewports": [
+    {
+      "name": "mobile",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "name": "tablet",
+      "width": 768,
+      "height": 1024
+    },
+    {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    }
+  ],
   "minHomeVariants": 5,
   "logo": {
     "selectedName": "Example Brand",

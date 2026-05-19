@@ -27,7 +27,9 @@ It prefers native Stitch MCP tools when they are available in the current agent 
 - For final multi-screen work, the Stitch project is the source of truth; local HTML/screenshots are evidence and handoff artifacts.
 - When code with styles/images is requested, prefer `download-project` over `export-project`.
 - `download-project` uses `Project.downloadAssets()`: it downloads every project screen's `code.html`, referenced remote images and stylesheet links into per-screen `assets/`, screenshots when available, top-level `DESIGN.md` when exposed, and `download-project.json` with screen metadata and warnings.
+- If the SDK downloader hits a filesystem path-length error from long Stitch screen titles or image prompts, the CLI automatically falls back to StitchFlow's safe downloader with short screen directories; `--safe-download` forces that path.
 - Treat `download-project` output as a local code/assets checkpoint for implementation handoff. It can include scratch/design-system screens and may still reference external runtime scripts such as Tailwind CDN, so filter to approved screen ids in handoff notes and vendor/build external dependencies during production implementation.
+- Use `design-system` when local fallback needs to list, create, update, or apply Stitch design systems exposed by the live MCP schema.
 
 ## Native MCP setup
 

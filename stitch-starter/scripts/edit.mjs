@@ -5,6 +5,7 @@ import {
   createStitch,
   ensureApiKey,
   normalizeDeviceType,
+  normalizeModelId,
   parseArgs,
   resolveTarget,
   saveArtifacts,
@@ -19,11 +20,12 @@ const args = parseArgs(process.argv.slice(2));
 const prompt = args.prompt;
 
 if (!prompt) {
-  console.error('Usage: npm run edit -- --prompt "Make it darker and more premium" [--project-id 123 --screen-id 456] [--device DESKTOP] [--timeout-ms 900000] [--retries 2]');
+  console.error('Usage: npm run edit -- --prompt "Make it darker and more premium" [--project-id 123 --screen-id 456] [--device DESKTOP] [--model-id GEMINI_3_1_PRO] [--timeout-ms 900000] [--retries 2]');
   process.exit(1);
 }
 
 const deviceType = normalizeDeviceType(args.device, "DESKTOP");
+const modelId = normalizeModelId(args["model-id"]);
 const { stitch, client } = createStitch({ timeoutMs: args["timeout-ms"] });
 
 try {
@@ -33,7 +35,7 @@ try {
   console.log(`Editing screen: ${screen.id}`);
 
   const edited = await withRetry(
-    () => screen.edit(prompt, deviceType),
+    () => screen.edit(prompt, deviceType, modelId),
     {
       label: "edit_screens",
       retries: args.retries,
@@ -52,6 +54,7 @@ try {
     screenId: edited.id,
     prompt,
     deviceType,
+    modelId,
     htmlUrl,
     imageUrl,
     outDir

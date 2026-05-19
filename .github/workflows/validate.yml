@@ -5,6 +5,12 @@ on:
     branches:
       - main
   pull_request:
+  workflow_dispatch:
+    inputs:
+      run_site_design_e2e:
+        description: Run the full live site-design E2E after regression:e2e
+        required: false
+        default: "false"
 
 jobs:
   validate-install:
@@ -25,6 +31,38 @@ jobs:
         working-directory: stitch-starter
         run: npm ci
 
+      - name: Validate toolkit scripts
+        working-directory: stitch-starter
+        run: |
+          for script in scripts/*.mjs; do
+            node --check "$script"
+          done
+
+          node - <<'NODE'
+          const fs = require("node:fs");
+          const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+          const requiredScripts = [
+            "generate",
+            "edit",
+            "variants",
+            "list",
+            "tools",
+            "design-md",
+            "design-system",
+            "export-screen",
+            "export-screens",
+            "export-project",
+            "download-project",
+            "regression:e2e",
+            "site-design:e2e",
+            "site-design-audit"
+          ];
+          const missing = requiredScripts.filter((name) => !pkg.scripts?.[name]);
+          if (missing.length) {
+            throw new Error(`Missing package scripts: ${missing.join(", ")}`);
+          }
+          NODE
+
       - name: Validate installer layout
         env:
           AGENT_SKILLS_HOME: /tmp/stitchflow-test-agents
@@ -41,7 +79,7 @@ jobs:
             "$OPENCLAW_HOME" \
             "$COPILOT_HOME"
 
-          bash install.sh --target all --skip-smoke
+          bash install.sh --target all --skip-smoke --skip-npm
 
           test -d "$AGENT_SKILLS_HOME/skills/stitchflow"
           test -d "$AGENT_SKILLS_HOME/skills/stitch-design-local"
@@ -54,3 +92,56 @@ jobs:
           test -L "$COPILOT_HOME/skills/stitchflow"
           test -L "$COPILOT_HOME/skills/stitch-design-local"
           test -f "$STITCH_STARTER_ROOT/package.json"
+          test -f "$STITCH_STARTER_ROOT/scripts/design-system.mjs"
+          test -f "$STITCH_STARTER_ROOT/scripts/site-design-e2e.mjs"
+          test ! -d "$STITCH_STARTER_ROOT/runs"
+          test ! -d "$STITCH_STARTER_ROOT/node_modules"
+
+  live-regression:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: stitch-starter/package-lock.json
+
+      - name: Install toolkit dependencies
+        working-directory: stitch-starter
+        run: npm ci
+
+      - name: Verify live regression credentials
+        env:
+          STITCH_API_KEY: ${{ secrets.STITCH_API_KEY }}
+        run: test -n "$STITCH_API_KEY"
+
+      - name: Run live regression E2E
+        working-directory: stitch-starter
+        env:
+          STITCH_API_KEY: ${{ secrets.STITCH_API_KEY }}
+        run: npm run regression:e2e -- --timeout-ms 900000 --retries 1 --retry-delay-ms 3000 --model-id GEMINI_3_FLASH
+
+      - name: Install Playwright browser for rendered site audit
+        if: inputs.run_site_design_e2e == 'true'
+        working-directory: stitch-starter
+        run: npx playwright install --with-deps chromium
+
+      - name: Run live site design E2E
+        if: inputs.run_site_design_e2e == 'true'
+        working-directory: stitch-starter
+        env:
+          STITCH_API_KEY: ${{ secrets.STITCH_API_KEY }}
+        run: npm run site-design:e2e -- --brand "Turnirka" --timeout-ms 900000 --operation-timeout-ms 900000 --total-timeout-ms 3600000 --retries 1 --retry-delay-ms 3000 --model-id GEMINI_3_FLASH
+
+      - name: Upload live regression artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stitchflow-live-regression-runs
+          path: stitch-starter/runs/

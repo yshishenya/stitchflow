@@ -198,7 +198,7 @@ clawhub login
 clawhub publish ./skills/stitchflow \
   --slug stitchflow \
   --name "StitchFlow" \
-  --version 1.3.0 \
+  --version 1.4.0 \
   --tags latest,design,ui,stitch
 ```
 

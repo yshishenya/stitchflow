@@ -6,6 +6,7 @@ import {
   ensureApiKey,
   normalizeCreativeRange,
   normalizeDeviceType,
+  normalizeModelId,
   normalizeVariantCount,
   parseArgs,
   parseCsv,
@@ -22,11 +23,12 @@ const args = parseArgs(process.argv.slice(2));
 const prompt = args.prompt;
 
 if (!prompt) {
-  console.error('Usage: npm run variants -- --prompt "Explore 3 visual directions" [--variant-count 3] [--creative-range EXPLORE] [--aspects LAYOUT,COLOR_SCHEME] [--timeout-ms 900000] [--retries 2]');
+  console.error('Usage: npm run variants -- --prompt "Explore 3 visual directions" [--variant-count 3] [--creative-range EXPLORE] [--aspects LAYOUT,COLOR_SCHEME] [--device DESKTOP] [--model-id GEMINI_3_1_PRO] [--timeout-ms 900000] [--retries 2]');
   process.exit(1);
 }
 
 const deviceType = normalizeDeviceType(args.device, "DESKTOP");
+const modelId = normalizeModelId(args["model-id"]);
 const variantCount = normalizeVariantCount(args["variant-count"], 3);
 const creativeRange = normalizeCreativeRange(args["creative-range"], "EXPLORE");
 const aspects = parseCsv(args.aspects);
@@ -47,7 +49,8 @@ try {
         creativeRange,
         ...(aspects.length ? { aspects } : {})
       },
-      deviceType
+      deviceType,
+      modelId
     ),
     {
       label: "generate_variants",
@@ -72,6 +75,7 @@ try {
       screenId: variant.id,
       prompt,
       deviceType,
+      modelId,
       creativeRange,
       aspects,
       htmlUrl,
@@ -91,6 +95,7 @@ try {
     baseScreenId: screen.id,
     prompt,
     deviceType,
+    modelId,
     creativeRange,
     aspects,
     variantCount,

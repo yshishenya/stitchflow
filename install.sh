@@ -31,6 +31,30 @@ copy_dir() {
   cp -R "$src" "$dest"
 }
 
+copy_file_if_exists() {
+  local src="$1"
+  local dest="$2"
+  if [[ -f "$src" ]]; then
+    mkdir -p "$(dirname "$dest")"
+    cp "$src" "$dest"
+  fi
+}
+
+copy_toolkit() {
+  local src="$1"
+  local dest="$2"
+  mkdir -p "$dest"
+
+  copy_file_if_exists "$src/.env.example" "$dest/.env.example"
+  copy_file_if_exists "$src/.gitignore" "$dest/.gitignore"
+  copy_file_if_exists "$src/README.md" "$dest/README.md"
+  copy_file_if_exists "$src/package.json" "$dest/package.json"
+  copy_file_if_exists "$src/package-lock.json" "$dest/package-lock.json"
+
+  mkdir -p "$dest/scripts"
+  cp -R "$src/scripts/." "$dest/scripts/"
+}
+
 safe_remove() {
   local path="$1"
   if [[ -L "$path" || -e "$path" ]]; then
@@ -194,7 +218,7 @@ done
 
 copy_dir "$CANONICAL_SKILL_SRC" "$CANONICAL_SKILL_DEST"
 copy_dir "$LEGACY_ALIAS_SKILL_SRC" "$LEGACY_ALIAS_SKILL_DEST"
-copy_dir "$TOOLKIT_SRC" "$TOOLKIT_DEST"
+copy_toolkit "$TOOLKIT_SRC" "$TOOLKIT_DEST"
 
 if [[ -n "$ENV_BACKUP" ]]; then
   cp "$ENV_BACKUP" "$TOOLKIT_DEST/.env"

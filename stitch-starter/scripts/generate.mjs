@@ -5,6 +5,7 @@ import {
   createStitch,
   ensureApiKey,
   normalizeDeviceType,
+  normalizeModelId,
   parseArgs,
   saveArtifacts,
   saveLatestScreen,
@@ -18,11 +19,12 @@ const args = parseArgs(process.argv.slice(2));
 const prompt = args.prompt;
 
 if (!prompt) {
-  console.error('Usage: npm run generate -- --prompt "A modern SaaS dashboard" [--title "My App"] [--project-id 123] [--device DESKTOP] [--timeout-ms 900000] [--retries 2]');
+  console.error('Usage: npm run generate -- --prompt "A modern SaaS dashboard" [--title "My App"] [--project-id 123] [--device DESKTOP] [--model-id GEMINI_3_1_PRO] [--timeout-ms 900000] [--retries 2]');
   process.exit(1);
 }
 
 const deviceType = normalizeDeviceType(args.device, "DESKTOP");
+const modelId = normalizeModelId(args["model-id"]);
 const projectTitle = args.title || "Stitch Starter";
 const { stitch, client } = createStitch({ timeoutMs: args["timeout-ms"] });
 
@@ -35,7 +37,7 @@ try {
   console.log(`Generating screen for ${deviceType}...`);
 
   const screen = await withRetry(
-    () => project.generate(prompt, deviceType),
+    () => project.generate(prompt, deviceType, modelId),
     {
       label: "generate_screen_from_text",
       retries: args.retries,
@@ -54,6 +56,7 @@ try {
     screenId: screen.id,
     prompt,
     deviceType,
+    modelId,
     htmlUrl,
     imageUrl,
     outDir

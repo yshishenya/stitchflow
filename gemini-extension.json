@@ -1,6 +1,6 @@
 {
   "name": "stitchflow",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Turn briefs into Stitch UI screens, variants, Tailwind-ready HTML, and screenshots with a local StitchFlow workflow.",
   "contextFileName": "GEMINI.md"
 }

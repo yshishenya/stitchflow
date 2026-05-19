@@ -1,12 +1,16 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { spawn } from "node:child_process";
 import {
   ensureApiKey,
   ensureDir,
+  inspectArtifact,
+  inspectHtmlArtifact,
+  isFlagEnabled,
+  normalizeIntegerOption,
   parseArgs,
   ROOT,
   RUNS_DIR,
+  runCommand,
   timestamp,
   writeJson,
   writeText
@@ -15,11 +19,24 @@ import {
 ensureApiKey();
 
 const args = parseArgs(process.argv.slice(2));
-const keepArtifacts = Boolean(args["keep-artifacts"] ?? true);
+const keepArtifacts = isFlagEnabled(args["keep-artifacts"], true);
 const timeoutMs = args["timeout-ms"] || "900000";
+const stepTimeoutMs = normalizeIntegerOption(
+  args["step-timeout-ms"],
+  Number(timeoutMs) + 120000,
+  { name: "step timeout", min: 10000 }
+);
 const retries = args.retries || "1";
+const childRetries = normalizeIntegerOption(args["child-retries"], retries, {
+  name: "child retries",
+  min: 0,
+  max: 5
+});
 const retryDelayMs = args["retry-delay-ms"] || "3000";
 const device = args.device || "DESKTOP";
+const modelId = args["model-id"];
+const modelArgs = modelId ? ["--model-id", modelId] : [];
+const requireDownloadApprovedScreens = isFlagEnabled(args["require-download-approved-screens"]);
 const runId = timestamp();
 const outDir = path.join(RUNS_DIR, `${runId}-regression-e2e`);
 const report = {
@@ -27,8 +44,11 @@ const report = {
   createdAt: new Date().toISOString(),
   outDir,
   device,
+  modelId: modelId || null,
+  stepTimeoutMs,
   steps: [],
-  assertions: []
+  assertions: [],
+  warnings: []
 };
 
 await ensureDir(outDir);
@@ -54,43 +74,35 @@ async function readJson(filePath) {
 }
 
 async function runStep(name, npmScript, scriptArgs = []) {
-  const startedAt = new Date().toISOString();
   const command = ["npm", "run", npmScript, "--", ...scriptArgs];
   console.log(`\n[${name}] ${command.join(" ")}`);
 
-  const result = await new Promise((resolve) => {
-    const child = spawn("npm", ["run", npmScript, "--", ...scriptArgs], {
+  let result = null;
+  for (let attempt = 0; attempt <= childRetries; attempt += 1) {
+    result = await runCommand("npm", ["run", npmScript, "--", ...scriptArgs], {
       cwd: ROOT,
       env: process.env,
-      stdio: ["ignore", "pipe", "pipe"]
+      timeoutMs: stepTimeoutMs
     });
+    if (result.code === 0) break;
+    if (attempt < childRetries) {
+      const delay = Number(retryDelayMs);
+      console.warn(`${name} failed with exit code ${result.code ?? "spawn-error"}. Retry ${attempt + 1}/${childRetries}...`);
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+  }
 
-    let stdout = "";
-    let stderr = "";
-
-    child.stdout.on("data", (chunk) => {
-      const text = chunk.toString();
-      stdout += text;
-      process.stdout.write(text);
-    });
-
-    child.stderr.on("data", (chunk) => {
-      const text = chunk.toString();
-      stderr += text;
-      process.stderr.write(text);
-    });
-
-    child.on("close", (code) => resolve({ code, stdout, stderr }));
-  });
-
-  const finishedAt = new Date().toISOString();
   const step = {
     name,
     npmScript,
     args: scriptArgs,
-    startedAt,
-    finishedAt,
+    startedAt: result.startedAt,
+    finishedAt: result.finishedAt,
+    durationMs: result.durationMs,
+    timedOut: result.timedOut,
     exitCode: result.code,
+    signal: result.signal || null,
+    error: result.error || null,
     stdout: result.stdout,
     stderr: result.stderr
   };
@@ -102,6 +114,19 @@ async function runStep(name, npmScript, scriptArgs = []) {
   }
 
   return step;
+}
+
+function extractSavedDir(step) {
+  const matches = [...step.stdout.matchAll(/^Saved to:\s*(.+)$/gm)];
+  return matches.at(-1)?.[1]?.trim() || null;
+}
+
+async function readStepJson(step, fileName = "result.json") {
+  const savedDir = extractSavedDir(step);
+  recordAssertion(`${step.name}: output dir printed`, Boolean(savedDir), { savedDir });
+  const filePath = path.join(savedDir, fileName);
+  recordAssertion(`${step.name}: ${fileName} exists`, await fileExists(filePath), { file: filePath });
+  return readJson(filePath);
 }
 
 async function validateScreenResult(label, metadata) {
@@ -116,15 +141,32 @@ async function validateScreenResult(label, metadata) {
   });
 
   if (metadata.htmlUrl) {
-    recordAssertion(`${label}: screen.html saved`, await fileExists(path.join(metadata.outDir, "screen.html")), {
-      file: path.join(metadata.outDir, "screen.html")
+    const htmlPath = path.join(metadata.outDir, "screen.html");
+    const html = await inspectHtmlArtifact(htmlPath);
+    recordAssertion(`${label}: screen.html saved`, html.exists, { file: htmlPath });
+    recordAssertion(`${label}: screen.html is non-empty HTML`, html.exists && html.fileType === "html" && html.sizeBytes > 200, {
+      file: htmlPath,
+      fileType: html.fileType,
+      sizeBytes: html.sizeBytes
+    });
+    recordAssertion(`${label}: screen.html has meaningful text`, html.exists && html.textLength >= 40, {
+      file: htmlPath,
+      textLength: html.textLength
     });
   }
 
   if (metadata.imageUrl) {
     const files = await fs.readdir(metadata.outDir);
-    recordAssertion(`${label}: screen image saved`, files.some((file) => /^screen\.(png|jpe?g|webp)$/.test(file)), {
+    const imageFile = files.find((file) => /^screen\.(png|jpe?g|webp)$/.test(file));
+    const image = imageFile ? await inspectArtifact(path.join(metadata.outDir, imageFile)) : { exists: false };
+    recordAssertion(`${label}: screen image saved`, Boolean(imageFile), {
       outDir: metadata.outDir
+    });
+    recordAssertion(`${label}: screen image is valid`, image.exists && ["png", "jpeg", "webp"].includes(image.fileType) && image.sizeBytes > 1024 && Boolean(image.dimensions?.width && image.dimensions?.height), {
+      file: imageFile ? path.join(metadata.outDir, imageFile) : null,
+      fileType: image.fileType,
+      sizeBytes: image.sizeBytes,
+      dimensions: image.dimensions || null
     });
   }
 }
@@ -134,11 +176,26 @@ try {
   const toolsPath = path.join(RUNS_DIR, "latest-tools.json");
   const tools = await readJson(toolsPath);
   const toolNames = new Set((tools.tools || []).map((tool) => tool.name));
-  for (const name of ["create_project", "generate_screen_from_text", "get_screen", "list_screens"]) {
+  for (const name of [
+    "create_project",
+    "get_project",
+    "list_projects",
+    "list_screens",
+    "get_screen",
+    "generate_screen_from_text",
+    "edit_screens",
+    "generate_variants",
+    "upload_design_md",
+    "create_design_system",
+    "create_design_system_from_design_md",
+    "update_design_system",
+    "list_design_systems",
+    "apply_design_system"
+  ]) {
     recordAssertion(`tools: ${name} exposed`, toolNames.has(name));
   }
 
-  await runStep("generate", "generate", [
+  const generateStep = await runStep("generate", "generate", [
     "--title",
     `StitchFlow E2E ${runId}`,
     "--device",
@@ -149,13 +206,100 @@ try {
     retries,
     "--retry-delay-ms",
     retryDelayMs,
+    ...modelArgs,
     "--prompt",
     "Compact dark SaaS landing page for a regression test. Include a hero, two cards, a primary button, and one AI generated sports-style image placeholder. Keep copy short."
   ]);
-  const generated = await readJson(path.join(RUNS_DIR, "latest-screen.json"));
+  const generated = await readStepJson(generateStep);
   report.projectId = generated.projectId;
   report.generatedScreenId = generated.screenId;
   await validateScreenResult("generate", generated);
+
+  const designSystemPath = path.join(outDir, "design-system.json");
+  await writeJson(designSystemPath, {
+    displayName: `StitchFlow E2E ${runId}`,
+    theme: {
+      colorMode: "DARK",
+      headlineFont: "INTER",
+      bodyFont: "INTER",
+      roundness: "ROUND_EIGHT",
+      customColor: "#10b981"
+    }
+  });
+  await runStep("design-system create", "design-system", [
+    "--action",
+    "create",
+    "--project-id",
+    generated.projectId,
+    "--file",
+    designSystemPath,
+    "--output-dir",
+    path.join(outDir, "design-system-create")
+  ]);
+  const createdDesignSystem = await readJson(path.join(outDir, "design-system-create", "result.json"));
+  const createdAssetId = createdDesignSystem.assetId || createdDesignSystem.result?.name?.replace(/^assets\//, "");
+  report.designSystemAssetId = createdAssetId;
+  recordAssertion("design-system create: asset id present", Boolean(createdAssetId), {
+    assetId: createdAssetId || null
+  });
+
+  await runStep("design-system list", "design-system", [
+    "--action",
+    "list",
+    "--project-id",
+    generated.projectId,
+    "--output-dir",
+    path.join(outDir, "design-system-list")
+  ]);
+  const listedDesignSystems = await readJson(path.join(outDir, "design-system-list", "result.json"));
+  recordAssertion("design-system list: includes at least one design system", listedDesignSystems.designSystemCount >= 1, {
+    designSystemCount: listedDesignSystems.designSystemCount
+  });
+
+  const updatedDesignSystemPath = path.join(outDir, "design-system-updated.json");
+  await writeJson(updatedDesignSystemPath, {
+    displayName: `StitchFlow E2E Updated ${runId}`,
+    theme: {
+      colorMode: "DARK",
+      headlineFont: "INTER",
+      bodyFont: "INTER",
+      roundness: "ROUND_EIGHT",
+      customColor: "#14b8a6"
+    }
+  });
+  await runStep("design-system update", "design-system", [
+    "--action",
+    "update",
+    "--project-id",
+    generated.projectId,
+    "--asset-id",
+    createdAssetId,
+    "--file",
+    updatedDesignSystemPath,
+    "--output-dir",
+    path.join(outDir, "design-system-update")
+  ]);
+
+  await runStep("design-system apply", "design-system", [
+    "--action",
+    "apply",
+    "--project-id",
+    generated.projectId,
+    "--asset-id",
+    createdAssetId,
+    "--screen-ids",
+    generated.screenId,
+    "--allow-screen-id-fallback",
+    "--output-dir",
+    path.join(outDir, "design-system-apply")
+  ]);
+  const appliedDesignSystem = await readJson(path.join(outDir, "design-system-apply", "result.json"));
+  recordAssertion("design-system apply: selected screen instances recorded", appliedDesignSystem.selectedScreenInstances.length === 1, {
+    selectedScreenInstances: appliedDesignSystem.selectedScreenInstances
+  });
+  recordAssertion("design-system apply: instance resolution recorded", Boolean(appliedDesignSystem.screenInstanceResolution), {
+    screenInstanceResolution: appliedDesignSystem.screenInstanceResolution || null
+  });
 
   const designMdPath = path.join(outDir, "DESIGN.md");
   await writeText(
@@ -174,7 +318,7 @@ Use a dark but airy interface, high contrast text, emerald action color, precise
     device
   ]);
 
-  await runStep("edit", "edit", [
+  const editStep = await runStep("edit", "edit", [
     "--project-id",
     generated.projectId,
     "--screen-id",
@@ -187,10 +331,11 @@ Use a dark but airy interface, high contrast text, emerald action color, precise
     retries,
     "--retry-delay-ms",
     retryDelayMs,
+    ...modelArgs,
     "--prompt",
     "Refine the screen: make spacing calmer, make the primary button more obvious, and add a small trust/status strip under the hero."
   ]);
-  const edited = await readJson(path.join(RUNS_DIR, "latest-screen.json"));
+  const edited = await readStepJson(editStep);
   report.editedScreenId = edited.screenId;
   await validateScreenResult("edit", edited);
   recordAssertion("edit: produced a new screen", edited.screenId !== generated.screenId, {
@@ -198,7 +343,7 @@ Use a dark but airy interface, high contrast text, emerald action color, precise
     editedScreenId: edited.screenId
   });
 
-  await runStep("variants", "variants", [
+  const variantsStep = await runStep("variants", "variants", [
     "--project-id",
     generated.projectId,
     "--screen-id",
@@ -217,20 +362,25 @@ Use a dark but airy interface, high contrast text, emerald action color, precise
     retries,
     "--retry-delay-ms",
     retryDelayMs,
+    ...modelArgs,
     "--prompt",
     "Create one refined alternate direction while preserving the same information architecture."
   ]);
-  const variantLatest = await readJson(path.join(RUNS_DIR, "latest-screen.json"));
+  const variantsManifest = await readStepJson(variantsStep, "variants.json");
+  const variantLatest = variantsManifest.variants?.[0];
+  recordAssertion("variants: first variant recorded", Boolean(variantLatest?.screenId), {
+    variantScreenId: variantLatest?.screenId || null
+  });
   report.variantScreenId = variantLatest.screenId;
   await validateScreenResult("variants latest", variantLatest);
 
-  await runStep("export-screen", "export-screen", [
+  const exportScreenStep = await runStep("export-screen", "export-screen", [
     "--project-id",
     generated.projectId,
     "--screen-id",
     variantLatest.screenId
   ]);
-  const exportedScreen = await readJson(path.join(RUNS_DIR, "latest-screen.json"));
+  const exportedScreen = await readStepJson(exportScreenStep);
   await validateScreenResult("export-screen", exportedScreen);
 
   await runStep("export-project", "export-project", ["--project-id", generated.projectId]);
@@ -282,9 +432,34 @@ Use a dark but airy interface, high contrast text, emerald action color, precise
   const downloadedScreenIds = new Set(downloadManifest.screens.map((screen) => screen.screenId));
   const missingApprovedScreens = approvedScreenIds.filter((screenId) => !downloadedScreenIds.has(screenId));
   report.downloadProjectMissingApprovedScreens = missingApprovedScreens;
+  if (missingApprovedScreens.length) {
+    const coveredByExportScreens = missingApprovedScreens.every((screenId) =>
+      approvedExportManifest.screens.some((screen) => screen.screenId === screenId)
+    );
+    const warning = {
+      name: "download-project missing approved screens",
+      missingApprovedScreens,
+      fallback: "export-screens",
+      coveredByExportScreens
+    };
+    report.warnings.push(warning);
+    console.warn(`download-project omitted approved screens; export-screens fallback covers them: ${missingApprovedScreens.join(", ")}`);
+    recordAssertion("download-project: missing approved screens covered by export-screens fallback", coveredByExportScreens, warning);
+    if (requireDownloadApprovedScreens) {
+      recordAssertion("download-project: all approved screens downloaded", false, warning);
+    }
+  }
   for (const screen of downloadManifest.screens) {
-    recordAssertion(`download-project: code exists for ${screen.screenId}`, await fileExists(path.join(downloadDir, screen.filePath)), {
-      file: path.join(downloadDir, screen.filePath)
+    const codePath = path.join(downloadDir, screen.filePath);
+    const html = await inspectHtmlArtifact(codePath);
+    recordAssertion(`download-project: code exists for ${screen.screenId}`, html.exists, {
+      file: codePath
+    });
+    recordAssertion(`download-project: code is valid HTML for ${screen.screenId}`, html.exists && html.fileType === "html" && html.sizeBytes > 200 && html.textLength >= 40, {
+      file: codePath,
+      fileType: html.fileType,
+      sizeBytes: html.sizeBytes,
+      textLength: html.textLength
     });
   }
   report.downloadProjectDir = downloadDir;

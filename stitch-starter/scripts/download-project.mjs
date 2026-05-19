@@ -2,7 +2,9 @@ import path from "node:path";
 import { stitch } from "@google/stitch-sdk";
 import {
   createRunDirForName,
+  downloadProjectAssetsWithFallback,
   ensureApiKey,
+  isFlagEnabled,
   parseArgs,
   writeJson
 } from "./_common.mjs";
@@ -18,18 +20,24 @@ if (!projectId) {
 }
 
 const assetsSubdir = args["assets-subdir"] || "assets";
+const forceSafe = isFlagEnabled(args["safe-download"]);
 const outDir = args["output-dir"]
   ? path.resolve(args["output-dir"])
   : await createRunDirForName("download-project", projectId);
 
 const project = stitch.project(projectId);
-const result = await project.downloadAssets(outDir, { assetsSubdir });
+const result = await downloadProjectAssetsWithFallback(project, outDir, {
+  projectId,
+  assetsSubdir,
+  forceSafe
+});
 
 const metadata = {
   operation: "download-project",
   createdAt: new Date().toISOString(),
   projectId,
   assetsSubdir,
+  downloadMode: result.mode,
   screens: result.screens,
   warnings: result.warnings,
   outDir
@@ -38,6 +46,7 @@ const metadata = {
 await writeJson(path.join(outDir, "download-project.json"), metadata);
 
 console.log(`Project: ${projectId}`);
+console.log(`Mode: ${result.mode}`);
 console.log(`Downloaded screens: ${result.screens.length}`);
 console.log(`Saved to: ${outDir}`);
 if (result.warnings.length) {
